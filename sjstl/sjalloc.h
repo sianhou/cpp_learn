@@ -90,6 +90,93 @@ class allocator {
   }
 
 };
+
+#if 0
+#include "new"
+#define __THROW_BAD_ALLOC throw bad_alloc
+#elif !defined(__THROW_BAD_ALLOC)
+#include "iostream"
+#define __THROW_BAD_ALLOC do { \
+        std::cerr << "out of memory" << std::endl; \
+        exit(EXIT_FAILURE);         \
+        } while(0)
+#endif
+
+template<int inst>
+class __malloc_alloc_template {
+ private:
+  //oom: out of memory
+  static void *oom_malloc(size_t);
+  static void *oom_realloc(void *, size_t);
+  static void (*__malloc_alloc_oom_handler)();
+
+ public:
+  static void *allocate(size_t n) {
+      void *result;
+      if (0 == (result = malloc(n))) { // use malloc directly in the first class allocator
+          result = oom_malloc(n);   // use oom when malloc fail
+      }
+      return result;
+  }
+
+  static void *deallocate(void *p, size_t) {
+      free(p);
+  }
+
+  static void *reallocate(void *p, size_t, size_t new_size) {
+      void *result;
+      if (0 == (result = realloc(p, new_size))) {
+          result = oom_realloc(p, new_size);
+      }
+      return result;
+  }
+
+  static void (*set_malloc_handler(void (*f)()))() {
+      void (*old)() = __malloc_alloc_oom_handler;
+      __malloc_alloc_oom_handler = f;
+      return old;
+  }
+};
+
+// default 0, you must set it
+template<int inst>
+void (*__malloc_alloc_template<inst>::__malloc_alloc_oom_handler)() = 0;
+
+template<int inst>
+void *__malloc_alloc_template<inst>::oom_malloc(size_t n) {
+    void (*my_malloc_handler)();
+    void *result;
+
+    do {
+        my_malloc_handler = __malloc_alloc_oom_handler;
+        if (0 == my_malloc_handler) {
+            __THROW_BAD_ALLOC;
+        }
+        (*my_malloc_handler)(); // 调用处理函数，试图释放内存
+        if (0 != (result = malloc(n))) {
+            return result;
+        }
+    } while (1);
+}
+
+template<int inst>
+void *__malloc_alloc_template<inst>::oom_realloc(void *p, size_t n) {
+    void (*my_malloc_handler)();
+    void *result;
+
+    do {
+        my_malloc_handler = __malloc_alloc_oom_handler;
+        if (0 == my_malloc_handler) {
+            __THROW_BAD_ALLOC;
+        }
+        (*my_malloc_handler)(); // 调用处理函数，试图释放内存
+        if (0 != (result = realloc(p, n))) {
+            return result;
+        }
+    } while (1);
+}
+
+typedef __malloc_alloc_template<0> malloc_alloc;
 }
 
 #endif //LEARN_CXX_SJSTL_SJALLOC_H_
