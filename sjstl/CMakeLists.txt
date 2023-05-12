@@ -1,0 +1,1 @@
+add_executable(test_sjalloc test_sjalloc.cpp)
