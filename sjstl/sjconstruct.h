@@ -38,7 +38,7 @@ inline void __destroy(ForwardIterator first, ForwardIterator last, T *) {
 }
 
 template<class ForwardIterator>
-inline void destory(ForwardIterator first, ForwardIterator last) {
+inline void destroy(ForwardIterator first, ForwardIterator last) {
   __destroy(first, last, value_type(first));
 }
 
@@ -75,7 +75,7 @@ __uninitialized_copy(InputIterator first, InputIterator last, ForwardIterator re
 template<class InputIterator, class ForwardIterator>
 inline ForwardIterator
 uninitialized_copy(InputIterator first, InputIterator last, ForwardIterator result) {
-  return __uninitialized_copy_aux(first, last, result, value_type(first));
+  return __uninitialized_copy(first, last, result, value_type(first));
 }
 
 template<>
