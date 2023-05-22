@@ -188,6 +188,85 @@ class List {
             next = first;
         }
     }
+ protected:
+    void transfer(iterator position, iterator first, iterator last) {
+        if (position != last) {
+            (*(link_type((*last.node).prev))).next = position.node;
+            (*(link_type((*first.node).prev))).next = last.node;
+            (*(link_type((*position.node).prev))).next = first.node;
+            link_type tmp = link_type((*position.node).prev);
+            (*position.node).prev = (*last.node).prev;
+            (*last.node).prev = (*first.node).prev;
+            (*first.node).prev = tmp;
+        }
+    }
+ public:
+    void splice(iterator position, List &x) {
+        if (!x.empty()) {
+            transfer(position, x.begin(), x.end());
+        }
+    }
+
+    void splice(iterator position, List &, iterator i) {
+        iterator j = i;
+        ++j;
+        if (position == i || position == j) return;
+        transfer(position, i, j);
+    }
+
+    void splice(iterator position, List &, iterator first, iterator last) {
+        if (first != last) {
+            transfer(position, first, last);
+        }
+    }
+
+    void merge(List &x) {
+        iterator first1 = begin();
+        iterator last1 = end();
+        iterator first2 = x.begin();
+        iterator last2 = x.end();
+
+        while (first1 != last1 && first2 != last2) {
+            if (*first2 < *first1) {
+                iterator next = first2;
+                transfer(first1, first2, ++next);
+                first2 = next;
+            } else {
+                ++first1;
+            }
+        }
+        if (first2 != last2) {
+            transfer(last1, first2, last2);
+        }
+    }
+
+    void reverse() {
+        if (node->next == node || link_type(node->next)->next == node) { return; }
+
+        iterator first = begin();
+        ++first;
+        while (first != end()) {
+            iterator old = first;
+            ++first;
+            transfer(begin(), old, first);
+        }
+    }
+//TODO(HOUSIAN)
+    void sort() {
+        if (node->next == node || link_type(node->next)->next == node) { return; }
+
+        List carry;
+        List counter[64];
+        int fill = 0;
+        while (!empty()) {
+            carry.splice(carry.begin(), *this, begin());
+            int i = 0;
+            while (i < fill && !counter[i].empty()) {
+                counter[i].merge(carry);
+
+            }
+        }
+    }
 };
 }
 
