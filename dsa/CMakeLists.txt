@@ -1,0 +1,1 @@
+add_executable(test_bintree test_bintree.cpp)
