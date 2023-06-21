@@ -15,8 +15,14 @@ int main() {
     root.insertAsRC(2);
 
     sj::travPre_R(&root, visit);
+    sj::travPre_I2(&root, visit);
+
     sj::travIn_R(&root, visit);
+    sj::travIn_I1(&root, visit);
+
     sj::travPost_R(&root, visit);
+
+    sj::travLevel(&root, visit);
 
     return 0;
 }

@@ -6,11 +6,28 @@
 #define LEARN_CPP_DSA_BINTREE_H_
 
 #include "algorithm"
+#include "stack"
+#include "queue"
 
 namespace sj {
 
 #define statue(p) ((p) ? (p)->height : -1)
 typedef enum { RED, BLACK } RBColor;
+// for a node
+#define IsRoot(x) (!((x).parent))
+#define IsLChild(x) (!IsRoot(x) && (&(x) == (x).parent->left_child))
+#define IsRChild(x) (!IsRoot(x) && (&(x) == (x).parent->right_child))
+#define HasParent(x) (!IsRoot(x))
+#define HasLChild(x) ((x).left_child)
+#define HasRChild(x) ((x).right_child)
+#define HasChild(x) (HasLChild(x) || HasRChild(x))
+#define HasBothChild(x) (HasLChild(x) && HasRChild(x))
+#define IsLeaf(x) (!HasChild(x))
+#define FromParentTo(x) ( \
+    IsRoot(x) ? _root : ( \
+    IsLChild(x) ? (x).parent->left_child : (x).parent->right_child \
+    )                     \
+)
 
 template<class T>
 struct BinNode {
@@ -32,7 +49,18 @@ struct BinNode {
     int size();
     node_pointer insertAsLC(const T &e) { return left_child = new self(e); }
     node_pointer insertAsRC(const T &e) { return right_child = new self(e); }
-    node_pointer succ();
+    node_pointer succ() {
+        node_pointer s;
+        if (right_child) {
+            s = right_child;
+            while (HasLChild(*s)) {
+                s = s->left_child;
+            }
+        } else {
+            while ((IsRChild(*s))) s = s->parent;
+            s = s->parent;
+        }
+    }
     template<class VST>
     void travLevel(VST &);
     template<class VST>
@@ -44,6 +72,7 @@ struct BinNode {
 
     bool operator<(const self &bn) { return data < bn.data; }
     bool operator==(const self &bn) { return data == bn.data; }
+
 };
 
 template<class T, class VST>
@@ -54,12 +83,71 @@ void travPre_R(BinNode<T> *x, VST visit) {
     travPre_R(x->right_child, visit);
 }
 
+template<typename T, typename VST>
+void visitAlongLeftBranch(BinNode<T> *x, VST visit, std::stack<BinNode<T> *> &s) {
+    while (x) {
+        visit(x->data);
+        s.push(x->right_child);
+        x = x->left_child;
+    }
+}
+
+template<typename T, typename VST>
+void travPre_I2(BinNode<T> *x, VST visit) {
+    std::stack<BinNode<T> *> S;
+    while (true) {
+        visitAlongLeftBranch(x, visit, S);
+        if (S.empty()) break;
+        x = S.top();
+        S.pop();
+    }
+}
+
 template<class T, class VST>
 void travIn_R(BinNode<T> *x, VST visit) {
     if (!x) return;
     travIn_R(x->left_child, visit);
     visit(x->data);
     travIn_R(x->right_child, visit);
+}
+
+template<typename T>
+void goAlongLeftBranch(BinNode<T> *x, std::stack<BinNode<T> *> &s) {
+    while (x) {
+        s.push(x);
+        x = x->left_child;
+    }
+}
+
+template<class T, class VST>
+void travIn_I1(BinNode<T> *x, VST visit) {
+    std::stack<BinNode<T> *> S;
+    while (true) {
+        goAlongLeftBranch(x, S);
+        if (S.empty()) break;
+        x = S.top();
+        S.pop();
+        visit(x->data);
+        x = x->right_child;
+    }
+}
+
+template<class T, class VST>
+void travIn_I2(BinNode<T> *x, VST visit) {
+    std::stack<BinNode<T> *> S;
+    while (true) {
+        if (x) {
+            S.push(x);
+            x = x->left_child;
+        } else if (!S.empty()) {
+            x = S.top();
+            S.pop();
+            visit(x->data);
+            x = x->right_child;
+        } else {
+            break;
+        }
+    }
 }
 
 template<class T, class VST>
@@ -70,21 +158,47 @@ void travPost_R(BinNode<T> *x, VST visit) {
     visit(x->data);
 }
 
-// for a node
-#define IsRoot(x) (!((x).parent))
-#define IsLChild(x) (!IsRoot(x) && (&(x) == (x).parent->left_child))
-#define IsRChild(x) (!IsRoot(x) && (&(x) == (x).parent->right_child))
-#define HasParent(x) (!IsRoot(x))
-#define HasLChild(x) ((x).left_child)
-#define HasRChild(x) ((x).right_child)
-#define HasChild(x) (HasLChild(x) || HasRChild(x))
-#define HasBothChild(x) (HasLChild(x) && HasRChild(x))
-#define IsLeaf(x) (!HasChild(x))
-#define FromParentTo(x) ( \
-    IsRoot(x) ? _root : ( \
-    IsLChild(x) ? (x).parent->left_child : (x).parent->right_child \
-    )                     \
-)
+template<typename T>
+void gotoHLVFL(std::stack<BinNode<T> *> &S) {
+    while (BinNode<T> *x = S.top()) {
+        if (HasLChild(*x)) {
+            if (HasRChild(*x)) S.push(x->right_child);
+            S.push(x->left_child);
+        } else {
+            S.push(x->right_child);
+        }
+    }
+    S.pop();
+}
+
+template<class T, class VST>
+void travPost_I(BinNode<T> *x, VST visit) {
+    std::stack<BinNode<T> *> S;
+    if (x) S.push(x);
+    while (!S.empty()) {
+        if (S.top() != x->parent) {
+            gotoHLVFL(S);
+        }
+        x = S.top();
+        S.pop();
+        visit(x->data);
+    }
+}
+
+template<typename T, typename VST>
+void travLevel(BinNode<T> *x, VST visit) {
+    if (x) {
+        std::queue<BinNode<T> *> q;
+        q.push(x);
+        while (!q.empty()) {
+            x = q.front();
+            q.pop();
+            visit(x->data);
+            if (HasLChild(*x)) q.push(x->left_child);
+            if (HasRChild(*x)) q.push(x->right_child);
+        }
+    }
+}
 
 template<class T>
 class BinTree {
